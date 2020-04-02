@@ -37,6 +37,8 @@ func main() {
 		chans[i] = make(chan []bool)
 	}
 
+	// resultado := make(chan [][]bool, 32)
+
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
 	fmt.Println(" Num Gorrutinas = ", nroGorrutinas, "\n",
 		"Num Filas = ", filas, "\n",
@@ -48,30 +50,39 @@ func main() {
 	for i := 0; i < len(mapa); i++ {
 		mapa[i] = make([]bool, columnas)
 	}
-	renderizar(mapa)
 	print("---------------\n")
-	rellenar(mapa, semilla)
+	mapa = rellenar(mapa, semilla)
 	renderizar(mapa)
-	var wg sync.WaitGroup
+	// var wg sync.WaitGroup
 
 	// al final de cada generacion se realiza un wg.Wait() y luego se reorganiza y renderiza el estado actual del mapa
-	for i := 0; i < generaciones; i++ {
-		for j := 0; j < nroGorrutinas; j++ {
-			mapaGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, j)
-			wg.Add(1)
-			if i == 0 {
-				go procesar(mapaGorrutina, &wg, true, false, j, nroGorrutinas, filas, chans)
-			} else if i == nroGorrutinas-1 {
-				go procesar(mapaGorrutina, &wg, false, true, j, nroGorrutinas, filas, chans)
-			} else {
-				go procesar(mapaGorrutina, &wg, false, false, j, nroGorrutinas, filas, chans)
-			}
-		}
-		wg.Wait()
-		// REORGANIZAR TODOS LOS MAPAS Y LUEGO RENDERIZAR
-		// reorganizar(mapas de cada gorrutina)
-		renderizar(mapa)
-	}
+	// 	for i := 0; i < generaciones; i++ {
+	// 		for j := 0; j < nroGorrutinas; j++ {
+	// 			mapaGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, j)
+	// 			wg.Add(1)
+	// 			if i == 0 {
+	// 				go procesar(mapaGorrutina, &wg, true, false, j, nroGorrutinas, filas, chans)
+	// 			} else if i == nroGorrutinas-1 {
+	// 				go procesar(mapaGorrutina, &wg, false, true, j, nroGorrutinas, filas, chans)
+	// 			} else {
+	// 				go procesar(mapaGorrutina, &wg, false, false, j, nroGorrutinas, filas, chans)
+	// 			}
+	// 		}
+	// 		wg.Wait()
+	// 		// REORGANIZAR TODOS LOS MAPAS Y LUEGO RENDERIZAR
+	// 		// reorganizar(mapas de cada gorrutina)
+	// 		renderizar(mapa)
+	// 	}
+
+	// wg.Add(1)
+	calcularMapa(mapa, nroGorrutinas, filas, columnas, 0)
+	// println("------------------------------------------")
+	// renderizar(mapaGorrutina)
+	// println("------------------------------------------")
+	// go procesar(mapaGorrutina, &wg, true, false, 0, nroGorrutinas, filas, chans, resultado)
+	// wg.Wait()
+	// renderizar(<-resultado)
+
 }
 
 // FUNCION QUE IMPRIME EN PANTALLA EL RESULTADO DE LA ITERACION ACTUAL DEL ESTADO DEL MAPA
@@ -90,7 +101,7 @@ func renderizar(mapa [][]bool) {
 }
 
 // FUNCION QUE RELLENA UN AREA CON TANTAS SEMILLAS SE SOLICITEN O HASTA QUE SE LLENE TODA EL AREA
-func rellenar(mapa [][]bool, semilla int) {
+func rellenar(mapa [][]bool, semilla int) [][]bool {
 	s := rand.NewSource(42)
 	r := rand.New(s)
 	// max := ((area.fin.x - area.inicio.y) * (area.fin.y - area.inicio.y))
@@ -107,6 +118,7 @@ func rellenar(mapa [][]bool, semilla int) {
 			mapa[x][y] = true
 		}
 	}
+	return mapa
 }
 
 // FUNCION QUE BUSCA RETORNAR UN NUEVO MAPA DE DIMENSIONES [filas][((k+1)*bloque)]
@@ -114,21 +126,31 @@ func rellenar(mapa [][]bool, semilla int) {
 func calcularMapa(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool {
 
 	bloque := columnas / hilos
+
 	resto := columnas % hilos
 
 	if resto != 0 {
 		panic("Los bloques deben ser de igual tamaño, el tamaño, es decir, el modulo de la cantidad de columnas por la cantidad de rutinas debe ser igual a 0")
 	}
 
-	newMapa := make([][]bool, filas)
-	for i := 0; i < len(newMapa); i++ {
-		newMapa[i] = make([]bool, ((k + 1) * bloque))
-	}
-
 	// COPIAR A ESTE NUEVO MAPA DESDE EL MAPA ORIGINAL DESDE [0][(i*bloque)] hasta [filas-1][((k+1)*bloque-1)]
 	// RETORNAR EL NUEVO MAPA COPIADO
+	columnaMin := k * bloque
+	columnaMax := (k + 1) * bloque
 
-	newMapa = mapa[0:filas][(k * bloque) : (k+1)*bloque]
+	newMapa := make([][]bool, len(mapa))
+	for i := range mapa {
+		newMapa[i] = make([]bool, (columnaMax - columnaMin))
+		copy(newMapa[i], mapa[i])
+	}
+
+	println("------------------------------------------")
+	fmt.Println("Num Bloques = ", bloque)
+	fmt.Println("k * bloque = ", columnaMin, "\n",
+		"(k+1)*bloque = ", columnaMax)
+	println("------------------------------------------")
+	renderizar(newMapa)
+	println("------------------------------------------")
 
 	return newMapa
 }
@@ -158,7 +180,7 @@ func transiciones(celda bool, con int) bool {
 // SE LE ENTREGA SU SUB-MAPA, EL WAITGROUP PARA SINCRONIZAR, DOS BOOLEANOS PARA INDICAR SI ES INICIO O FINAL Y EL NUMERO DE GORRUTINA QUE ES
 // SE ENCARGARA DE LLAMAR A TODAS LAS FUNCIONES QUE REALIZAN OPERACIONES PARA EVALUAR EL PROXIMO ESTADO DE SU SUB-MAPA
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
-func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan []bool) ([][]bool, int) {
+func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan []bool, resultado chan [][]bool) ([][]bool, int) {
 
 	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1)
 	// el numero actual de la gorrutina  es util para el thread principal que se encargara de reorganizar el mapa completo en base a los sub mapas de
@@ -166,7 +188,7 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas i
 
 	defer wg.Done()
 	// mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool
-	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, chans)
+	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, chans, resultado)
 
 	return newMapa, k
 }
@@ -175,21 +197,36 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas i
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas int, chans [124]chan []bool) [][]bool {
+func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas int, chans [124]chan []bool, resultado chan [][]bool) [][]bool {
 	if inicio {
 		entrada := chans[0]
 		salida := chans[1]
 		borde := len(mapa[0])
 		bordeIzquierdo := mapa[0:filas][borde]
 		salida <- bordeIzquierdo
-		bordeDerecho := <-salida
+		bordeDerecho := <-entrada
 		_ = entrada
 		_ = salida
 		_ = bordeIzquierdo
 		_ = bordeDerecho
 
+		var newMapa [][]bool
+
+		for i := 0; i < len(mapa); i++ {
+			newMapa = make([][]bool, len(mapa))
+			for j := 0; j < len(mapa[i]); j++ {
+				newMapa[i] = make([]bool, len(mapa[i]))
+			}
+		}
+
+		for i := 0; i < len(mapa); i++ {
+			for j := 0; j < len(mapa[i]); j++ {
+				newMapa[i] = append(bordeDerecho, mapa[i][j])
+			}
+		}
+		return newMapa
 		// Realizar los pasos que aparecen en los comentarios al final
-		return mapa
+
 	} else if fin {
 		entrada := chans[n-2]
 		salida := chans[n-1]
