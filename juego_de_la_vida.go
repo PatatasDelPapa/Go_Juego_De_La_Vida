@@ -60,7 +60,7 @@ func main() {
 	}
 	renderizar(mapa)
 	print("---------------\n")
-	rellenar(mapa, semilla, tablero{inicio: celda{x: 0, y: 0}, fin: celda{x: filas, y: columnas}})
+	rellenar(mapa, semilla)
 	renderizar(mapa)
 	var wg sync.WaitGroup
 
@@ -101,16 +101,17 @@ func renderizar(mapa [][]bool) {
 }
 
 // FUNCION QUE RELLENA UN AREA CON TANTAS SEMILLAS SE SOLICITEN O HASTA QUE SE LLENE TODA EL AREA
-func rellenar(mapa [][]bool, semilla int, area tablero) {
+func rellenar(mapa [][]bool, semilla int) {
 	s := rand.NewSource(42)
 	r := rand.New(s)
-	max := ((area.fin.x - area.inicio.y) * (area.fin.y - area.inicio.y))
+	// max := ((area.fin.x - area.inicio.y) * (area.fin.y - area.inicio.y))
+	max := (len(mapa) * len(mapa[0]))
 	if semilla > max {
 		semilla = max
 	}
 	for i := 0; i < semilla; i++ {
-		x := r.Intn(area.fin.x)
-		y := (r.Intn(area.fin.y-area.inicio.y) + area.inicio.y)
+		x := r.Intn(len(mapa))
+		y := (r.Intn(len(mapa[0])))
 		if mapa[x][y] {
 			i--
 		} else {
