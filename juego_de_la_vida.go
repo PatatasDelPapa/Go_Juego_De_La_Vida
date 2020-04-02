@@ -8,6 +8,11 @@ import (
 	"sync"
 )
 
+type world struct {
+	MAPA [][]bool
+	NRO  int
+}
+
 func main() {
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
 	args := os.Args
@@ -32,12 +37,13 @@ func main() {
 		}
 	}
 
-	var chans [124]chan []bool
+	var chans [124]chan [][]bool
 	for i := range chans {
-		chans[i] = make(chan []bool)
+		chans[i] = make(chan [][]bool)
 	}
 
-	// resultado := make(chan [][]bool, 32)
+	resultado := make(chan world, 32)
+	var wg sync.WaitGroup
 
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
 	fmt.Println(" Num Gorrutinas = ", nroGorrutinas, "\n",
@@ -52,8 +58,8 @@ func main() {
 	}
 	print("---------------\n")
 	mapa = rellenar(mapa, semilla)
-	renderizar(mapa)
-	// var wg sync.WaitGroup
+	newWorld := world{MAPA: mapa, NRO: 0}
+	renderizar(newWorld.MAPA)
 
 	// al final de cada generacion se realiza un wg.Wait() y luego se reorganiza y renderiza el estado actual del mapa
 	// 	for i := 0; i < generaciones; i++ {
@@ -74,14 +80,17 @@ func main() {
 	// 		renderizar(mapa)
 	// 	}
 
-	// wg.Add(1)
-	calcularMapa(mapa, nroGorrutinas, filas, columnas, 0)
-	// println("------------------------------------------")
-	// renderizar(mapaGorrutina)
-	// println("------------------------------------------")
-	// go procesar(mapaGorrutina, &wg, true, false, 0, nroGorrutinas, filas, chans, resultado)
-	// wg.Wait()
-	// renderizar(<-resultado)
+	_ = wg
+	_ = resultado
+	wg.Add(1)
+	mundoGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, 0)
+	println("------------------------------------------")
+	renderizar(mundoGorrutina.MAPA)
+	println("------------------------------------------")
+	go procesar(mundoGorrutina, &wg, true, false, 0, nroGorrutinas, filas, chans, resultado)
+	wg.Wait()
+	mundito := <-resultado
+	renderizar(mundito.MAPA)
 
 }
 
@@ -123,7 +132,7 @@ func rellenar(mapa [][]bool, semilla int) [][]bool {
 
 // FUNCION QUE BUSCA RETORNAR UN NUEVO MAPA DE DIMENSIONES [filas][((k+1)*bloque)]
 // QUE COPIE EL MAPA ORIGINAL DESDE [0][(k*bloque)] hasta [filas-1][((k+1)*bloque-1)]
-func calcularMapa(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool {
+func calcularMapa(mapa [][]bool, hilos int, filas, columnas, k int) world {
 
 	bloque := columnas / hilos
 
@@ -144,15 +153,17 @@ func calcularMapa(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool {
 		copy(newMapa[i], mapa[i])
 	}
 
-	println("------------------------------------------")
-	fmt.Println("Num Bloques = ", bloque)
-	fmt.Println("k * bloque = ", columnaMin, "\n",
-		"(k+1)*bloque = ", columnaMax)
-	println("------------------------------------------")
-	renderizar(newMapa)
-	println("------------------------------------------")
+	// println("------------------------------------------")
+	// fmt.Println("Num Bloques = ", bloque)
+	// fmt.Println("k * bloque = ", columnaMin, "\n",
+	// 	"(k+1)*bloque = ", columnaMax)
+	// println("------------------------------------------")
+	// renderizar(newMapa)
+	// println("------------------------------------------")
 
-	return newMapa
+	newWorld := world{MAPA: newMapa, NRO: 0}
+
+	return newWorld
 }
 
 // FUNCION QUE SE ENCARGA DE EVALUAR SI LA CELDA CONTINUA VIVA O NO
@@ -180,76 +191,94 @@ func transiciones(celda bool, con int) bool {
 // SE LE ENTREGA SU SUB-MAPA, EL WAITGROUP PARA SINCRONIZAR, DOS BOOLEANOS PARA INDICAR SI ES INICIO O FINAL Y EL NUMERO DE GORRUTINA QUE ES
 // SE ENCARGARA DE LLAMAR A TODAS LAS FUNCIONES QUE REALIZAN OPERACIONES PARA EVALUAR EL PROXIMO ESTADO DE SU SUB-MAPA
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
-func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan []bool, resultado chan [][]bool) ([][]bool, int) {
+func procesar(mundo world, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan [][]bool, resultado chan world) {
 
 	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1)
 	// el numero actual de la gorrutina  es util para el thread principal que se encargara de reorganizar el mapa completo en base a los sub mapas de
 	// las gorrutinas
 
+	// fmt.Println(
+	// 	"K: ", k, "\n",
+	// 	"N: ", n, "\n",
+	// 	"Filas: ", filas)
+
 	defer wg.Done()
 	// mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool
-	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, chans, resultado)
+	nuevoEstado(mundo, inicio, fin, k, n, filas, chans, resultado)
 
-	return newMapa, k
 }
 
 // FUNCION QUE REVISARA LAS CONDICIONES DE BORDE DE LA GORRUTINA Y UTILIZARA CHANNELS PARA OBTENER Y ENVIAR LOS BORDES NECESARIOS
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas int, chans [124]chan []bool, resultado chan [][]bool) [][]bool {
+func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan [][]bool, resultado chan world) {
+	if n == 1 {
+		// CASO PARA CUANDO ES UNA GORRUTINA
+		resultado <- mundo
+	}
 	if inicio {
+		println(" INICIO TRUE")
 		entrada := chans[0]
 		salida := chans[1]
-		borde := len(mapa[0])
-		bordeIzquierdo := mapa[0:filas][borde]
-		salida <- bordeIzquierdo
-		bordeDerecho := <-entrada
+		// borde := len(mundo.MAPA[0])
+		// -----------------------------------------//
+		// bordeDerecho := make([][]bool, len(mundo.MAPA))
+		// for i := range mundo.MAPA {
+		// 	bordeDerecho[i] = make([]bool, 1)
+		// 	copy(bordeDerecho[i], mundo.MAPA[i])
+		// }
+		// -----------------------------------------//
+
 		_ = entrada
 		_ = salida
-		_ = bordeIzquierdo
-		_ = bordeDerecho
 
-		var newMapa [][]bool
+		viejoMapa := mundo.MAPA
 
-		for i := 0; i < len(mapa); i++ {
-			newMapa = make([][]bool, len(mapa))
-			for j := 0; j < len(mapa[i]); j++ {
-				newMapa[i] = make([]bool, len(mapa[i]))
-			}
+		newMapa := make([][]bool, len(viejoMapa))
+		for i := range viejoMapa {
+			newMapa[i] = make([]bool, len(viejoMapa[i]))
+			copy(newMapa[i], viejoMapa[i])
 		}
 
-		for i := 0; i < len(mapa); i++ {
-			for j := 0; j < len(mapa[i]); j++ {
-				newMapa[i] = append(bordeDerecho, mapa[i][j])
-			}
-		}
-		return newMapa
-		// Realizar los pasos que aparecen en los comentarios al final
+		// USANDO NEW MAPA HACER LOS CALCULOS DEL NUEVO ESTADO
+
+		mundo.MAPA = newMapa
+		resultado <- mundo
 
 	} else if fin {
+		println(" FIN TRUE ")
 		entrada := chans[n-2]
 		salida := chans[n-1]
-		bordeDerecho := mapa[0:filas][0]
-		salida <- bordeDerecho
-		bordeIzquierdo := <-entrada
+		// -----------------------------------------//
+		// bordeDerecho := mundo.MAPA[0:filas][0]
+		bordeIzquierdo := make([][]bool, len(mundo.MAPA))
+		for i := range mundo.MAPA {
+			bordeIzquierdo[i] = make([]bool, 1)
+			copy(bordeIzquierdo[i], mundo.MAPA[i])
+		}
+		// -----------------------------------------//
+
 		_ = entrada
 		_ = salida
-		_ = bordeDerecho
-		_ = bordeIzquierdo
 
-		// Realizar los pasos que aparecen en los comentarios al final
-		return mapa
+		viejoMapa := mundo.MAPA
+
+		newMapa := make([][]bool, len(viejoMapa))
+		for i := range mundo.MAPA {
+			newMapa[i] = make([]bool, len(viejoMapa[i]))
+			copy(newMapa[i], viejoMapa[i])
+		}
+
+		mundo.MAPA = newMapa
+		resultado <- mundo
 	} else {
+		println(" NO INICIO NO FIN TRUE ")
 		entradaIzquierda := chans[k*4-2]
 		salidaIzquierda := chans[k*4-1]
 		entradaDerecha := chans[k*4]
 		salidaDerecha := chans[k*4+1]
-		borde := len(mapa[0])
-		sBordeIzquierdo := mapa[0:filas][0]
-		sBordeDerecho := mapa[0:filas][borde]
-		salidaIzquierda <- sBordeIzquierdo
-		salidaDerecha <- sBordeDerecho
+
 		eBordeIzquierdo := <-entradaIzquierda
 		eBordeDerecho := <-entradaDerecha
 		_ = entradaDerecha
@@ -259,13 +288,23 @@ func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas int, chans [124]ch
 		_ = eBordeIzquierdo
 		_ = eBordeDerecho
 
-		// Realizar los pasos que aparecen en los comentarios al final
-		return mapa
+		viejoMapa := mundo.MAPA
+
+		newMapa := make([][]bool, len(viejoMapa))
+		for i := range mundo.MAPA {
+			newMapa[i] = make([]bool, len(viejoMapa[i]))
+			copy(newMapa[i], viejoMapa[i])
+		}
+
+		mundo.MAPA = newMapa
+		resultado <- mundo
 	}
-	// CALCULO DE LOS NUEVOS ESTADOS: (SE REALIZA DENTRO DEL PROPIO IF)
-	// Extension fantasma de su mapa
-	// Recorrer el mapa, contar cuantos vecinos vivos tiene cada celda
-	// Mandar esa informacion a la funcion que calcula si la celda vive o muere
-	// Actualizar la informacion en un nuevo mapa temporal para no arruinar el calculo de las demas celdas
-	// Retornar el mapa temporal con la informacion de las celdas actualizadas
 }
+
+// CALCULO DE LOS NUEVOS ESTADOS: (SE REALIZA DENTRO DEL PROPIO IF)
+// Extension fantasma de su mapa
+// Recorrer el mapa, contar cuantos vecinos vivos tiene cada celda
+// Mandar esa informacion a la funcion que calcula si la celda vive o muere
+// Actualizar la informacion en un nuevo mapa temporal para no arruinar el calculo de las demas celdas
+// Retornar el mapa temporal con la informacion de las celdas actualizadas
+// }
