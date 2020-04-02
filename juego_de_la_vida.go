@@ -24,8 +24,8 @@ func main() {
 	generaciones := 1
 	columnas := 1
 	filas := 1
-	nroGorrutinas := 1
 	semilla := 1
+	nroGorrutinas := 1
 
 	for i, arg := range args {
 		switch arg {
@@ -115,8 +115,8 @@ func rellenar(mapa [][]bool, semilla int, area tablero) {
 }
 
 // FUNCION QUE BUSCA RETORNAR UN NUEVO MAPA DE DIMENSIONES [filas][((k+1)*bloque)]
-// QUE COPIE EL MAPA ORIGINAL DESDE [0][(i*bloque)] hasta [filas-1][((k+1)*bloque-1)]
-func calcularTablero(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool {
+// QUE COPIE EL MAPA ORIGINAL DESDE [0][(k*bloque)] hasta [filas-1][((k+1)*bloque-1)]
+func calcularMapa(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool {
 
 	bloque := columnas / hilos
 	resto := columnas % hilos
@@ -132,6 +132,8 @@ func calcularTablero(mapa [][]bool, hilos int, filas, columnas, k int) [][]bool 
 
 	// COPIAR A ESTE NUEVO MAPA DESDE EL MAPA ORIGINAL DESDE [0][(i*bloque)] hasta [filas-1][((k+1)*bloque-1)]
 	// RETORNAR EL NUEVO MAPA COPIADO
+
+	newMapa = mapa[0:filas][(k * bloque) : (k+1)*bloque]
 
 	return newMapa
 }
