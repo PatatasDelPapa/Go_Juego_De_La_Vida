@@ -42,9 +42,9 @@ func main() {
 		}
 	}
 
-	var chans [124]chan bool
+	var chans [124]chan [][]bool
 	for i := range chans {
-		chans[i] = make(chan bool)
+		chans[i] = make(chan [][]bool)
 	}
 
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
