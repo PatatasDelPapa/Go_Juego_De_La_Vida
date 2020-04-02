@@ -67,16 +67,15 @@ func main() {
 	// al final de cada generacion se realiza un wg.Wait() y luego se reorganiza y renderiza el estado actual del mapa
 	for i := 0; i < generaciones; i++ {
 		for j := 0; j < nroGorrutinas; j++ {
-			// area := calcularTablero(nroGorrutinas, filas, columnas)
+			mapaGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, j)
 			wg.Add(1)
-			// if i == 0 {
-			// 	go procesar(area[i], &wg, true, false)
-			// } else if i == nroGorrutinas-1 {
-			// 	go procesar(area[i], &wg, false, true)
-			// } else {
-			// 	go procesar(area[i], &wg, false, false)
-			// }
-
+			if i == 0 {
+				go procesar(mapaGorrutina, &wg, true, false, j, nroGorrutinas, filas, columnas, chans)
+			} else if i == nroGorrutinas-1 {
+				go procesar(mapaGorrutina, &wg, false, true, j, nroGorrutinas, filas, columnas, chans)
+			} else {
+				go procesar(mapaGorrutina, &wg, false, false, j, nroGorrutinas, filas, columnas, chans)
+			}
 		}
 		wg.Wait()
 		// REORGANIZAR TODOS LOS MAPAS Y LUEGO RENDERIZAR
@@ -169,7 +168,7 @@ func transiciones(celda bool, con int) bool {
 // SE LE ENTREGA SU SUB-MAPA, EL WAITGROUP PARA SINCRONIZAR, DOS BOOLEANOS PARA INDICAR SI ES INICIO O FINAL Y EL NUMERO DE GORRUTINA QUE ES
 // SE ENCARGARA DE LLAMAR A TODAS LAS FUNCIONES QUE REALIZAN OPERACIONES PARA EVALUAR EL PROXIMO ESTADO DE SU SUB-MAPA
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
-func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, columnas int, chans []chan bool) ([][]bool, int) {
+func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, columnas int, chans [124]chan []bool) ([][]bool, int) {
 
 	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1) siendo 0 la gorrutina con la columna inicial
 	//       y (numero total de gorrutinas - 1) la gorrutina con la columna final las cuales tienen condiciones especiales de borde que las demas gorrutinas.
@@ -177,18 +176,17 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, 
 	// las gorrutinas
 
 	defer wg.Done()
+	// mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool
+	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, columnas, chans)
 
-	// newMapa = nuevoEstado(mapa, inicio, fin, k, n, filas, columnas)
-	// return newMapa, k
-
-	return mapa, k
+	return newMapa, k
 }
 
 // FUNCION QUE REVISARA LAS CONDICIONES DE BORDE DE LA GORRUTINA Y UTILIZARA CHANNELS PARA OBTENER Y ENVIAR LOS BORDES NECESARIOS
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool) [][]bool {
+func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans [124]chan []bool) [][]bool {
 	if inicio {
 		entrada := chans[0]
 		salida := chans[1]
@@ -200,9 +198,7 @@ func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, cha
 		_ = salida
 		_ = bordeIzquierdo
 		_ = bordeDerecho
-		// La gorrutina tiene la columna inicial
-		// Enviar su borde a su unico vecino
-		// Buscar borde de su unico vecino
+
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else if fin {
@@ -215,9 +211,7 @@ func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, cha
 		_ = salida
 		_ = bordeDerecho
 		_ = bordeIzquierdo
-		// La gorrutina tiene la columna final
-		// Enviar su borde a su unico vecino
-		// Buscar borde de su unico vecino
+
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else {
@@ -238,9 +232,7 @@ func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, cha
 		_ = salidaIzquierda
 		_ = eBordeIzquierdo
 		_ = eBordeDerecho
-		// La gorrutina tiene una columna intermedia
-		// Enviar su borde respectivo al vecino respectivo
-		// Buscar borde a sus dos vecinos
+
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	}
