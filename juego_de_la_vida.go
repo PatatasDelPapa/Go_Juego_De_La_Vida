@@ -8,16 +8,6 @@ import (
 	"sync"
 )
 
-type celda struct {
-	x int
-	y int
-}
-
-type tablero struct {
-	inicio celda
-	fin    celda
-}
-
 func main() {
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
 	args := os.Args
@@ -170,9 +160,8 @@ func transiciones(celda bool, con int) bool {
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
 func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan []bool) ([][]bool, int) {
 
-	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1) siendo 0 la gorrutina con la columna inicial
-	//       y (numero total de gorrutinas - 1) la gorrutina con la columna final las cuales tienen condiciones especiales de borde que las demas gorrutinas.
-	// el numero actual de la gorrutina tambien es util para el thread principal que se encargara de reorganizar el mapa completo en base a los sub mapas de
+	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1)
+	// el numero actual de la gorrutina  es util para el thread principal que se encargara de reorganizar el mapa completo en base a los sub mapas de
 	// las gorrutinas
 
 	defer wg.Done()
