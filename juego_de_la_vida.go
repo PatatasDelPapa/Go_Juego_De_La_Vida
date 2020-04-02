@@ -70,11 +70,11 @@ func main() {
 			mapaGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, j)
 			wg.Add(1)
 			if i == 0 {
-				go procesar(mapaGorrutina, &wg, true, false, j, nroGorrutinas, filas, columnas, chans)
+				go procesar(mapaGorrutina, &wg, true, false, j, nroGorrutinas, filas, chans)
 			} else if i == nroGorrutinas-1 {
-				go procesar(mapaGorrutina, &wg, false, true, j, nroGorrutinas, filas, columnas, chans)
+				go procesar(mapaGorrutina, &wg, false, true, j, nroGorrutinas, filas, chans)
 			} else {
-				go procesar(mapaGorrutina, &wg, false, false, j, nroGorrutinas, filas, columnas, chans)
+				go procesar(mapaGorrutina, &wg, false, false, j, nroGorrutinas, filas, chans)
 			}
 		}
 		wg.Wait()
@@ -168,7 +168,7 @@ func transiciones(celda bool, con int) bool {
 // SE LE ENTREGA SU SUB-MAPA, EL WAITGROUP PARA SINCRONIZAR, DOS BOOLEANOS PARA INDICAR SI ES INICIO O FINAL Y EL NUMERO DE GORRUTINA QUE ES
 // SE ENCARGARA DE LLAMAR A TODAS LAS FUNCIONES QUE REALIZAN OPERACIONES PARA EVALUAR EL PROXIMO ESTADO DE SU SUB-MAPA
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
-func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, columnas int, chans [124]chan []bool) ([][]bool, int) {
+func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas int, chans [124]chan []bool) ([][]bool, int) {
 
 	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1) siendo 0 la gorrutina con la columna inicial
 	//       y (numero total de gorrutinas - 1) la gorrutina con la columna final las cuales tienen condiciones especiales de borde que las demas gorrutinas.
@@ -177,7 +177,7 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, 
 
 	defer wg.Done()
 	// mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool
-	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, columnas, chans)
+	newMapa := nuevoEstado(mapa, inicio, fin, k, n, filas, chans)
 
 	return newMapa, k
 }
@@ -186,7 +186,7 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, 
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans [124]chan []bool) [][]bool {
+func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas int, chans [124]chan []bool) [][]bool {
 	if inicio {
 		entrada := chans[0]
 		salida := chans[1]
