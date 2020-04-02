@@ -42,9 +42,9 @@ func main() {
 		}
 	}
 
-	var chans [124]chan [][]bool
+	var chans [124]chan []bool
 	for i := range chans {
-		chans[i] = make(chan [][]bool)
+		chans[i] = make(chan []bool)
 	}
 
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
@@ -187,49 +187,56 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, 
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan bool) [][]bool {
+func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan []bool) [][]bool {
 	if inicio {
-		// chans[0:2]
 		entrada := chans[0]
 		salida := chans[1]
 		borde := len(mapa[0])
 		bordeIzquierdo := mapa[0:filas][borde]
+		salida <- bordeIzquierdo
+		bordeDerecho := <-salida
 		_ = entrada
 		_ = salida
 		_ = bordeIzquierdo
+		_ = bordeDerecho
 		// La gorrutina tiene la columna inicial
 		// Enviar su borde a su unico vecino
 		// Buscar borde de su unico vecino
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else if fin {
-		// chans[n-2:n]
 		entrada := chans[n-2]
 		salida := chans[n-1]
 		bordeDerecho := mapa[0:filas][0]
+		salida <- bordeDerecho
+		bordeIzquierdo := <-entrada
 		_ = entrada
 		_ = salida
 		_ = bordeDerecho
+		_ = bordeIzquierdo
 		// La gorrutina tiene la columna final
 		// Enviar su borde a su unico vecino
 		// Buscar borde de su unico vecino
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else {
-		// chans[(k*4-2):(k*4+1)]
-		entradaDerecha := chans[k*4-2]
-		salidaDerecha := chans[k*4-1]
-		entradaIzquierda := chans[k*4]
-		salidaIzquierda := chans[k*4+1]
+		entradaIzquierda := chans[k*4-2]
+		salidaIzquierda := chans[k*4-1]
+		entradaDerecha := chans[k*4]
+		salidaDerecha := chans[k*4+1]
 		borde := len(mapa[0])
-		bordeIzquierdo := mapa[0:filas][0]
-		bordeDerecho := mapa[0:filas][borde]
+		sBordeIzquierdo := mapa[0:filas][0]
+		sBordeDerecho := mapa[0:filas][borde]
+		salidaIzquierda <- sBordeIzquierdo
+		salidaDerecha <- sBordeDerecho
+		eBordeIzquierdo := <-entradaIzquierda
+		eBordeDerecho := <-entradaDerecha
 		_ = entradaDerecha
 		_ = salidaDerecha
 		_ = entradaIzquierda
 		_ = salidaIzquierda
-		_ = bordeIzquierdo
-		_ = bordeDerecho
+		_ = eBordeIzquierdo
+		_ = eBordeDerecho
 		// La gorrutina tiene una columna intermedia
 		// Enviar su borde respectivo al vecino respectivo
 		// Buscar borde a sus dos vecinos
