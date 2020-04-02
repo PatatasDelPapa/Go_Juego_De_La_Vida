@@ -42,6 +42,11 @@ func main() {
 		}
 	}
 
+	var chans [124]chan bool
+	for i := range chans {
+		chans[i] = make(chan bool)
+	}
+
 	//  -ng NUM_GORUTINAS -r NUM_FILAS -c NUM_COLS -i GENERACIONES -s SEMILLA
 	fmt.Println(" Num Gorrutinas = ", nroGorrutinas, "\n",
 		"Num Filas = ", filas, "\n",
@@ -163,7 +168,7 @@ func transiciones(celda bool, con int) bool {
 // SE LE ENTREGA SU SUB-MAPA, EL WAITGROUP PARA SINCRONIZAR, DOS BOOLEANOS PARA INDICAR SI ES INICIO O FINAL Y EL NUMERO DE GORRUTINA QUE ES
 // SE ENCARGARA DE LLAMAR A TODAS LAS FUNCIONES QUE REALIZAN OPERACIONES PARA EVALUAR EL PROXIMO ESTADO DE SU SUB-MAPA
 // AL TERMINAR DEVOLVERA EL NUEVO ESTADO DE SU SUB-MAPA AL THREAD PRINCIPAL Y SU NUMERO DE GORRUTINA
-func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k int) ([][]bool, int) {
+func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k, n, filas, columnas int, chans []chan bool) ([][]bool, int) {
 
 	// nota: "k" es el numero actual de la gorrutina el cual va desde k = 0 hasta k = (numero total de gorrutinas - 1) siendo 0 la gorrutina con la columna inicial
 	//       y (numero total de gorrutinas - 1) la gorrutina con la columna final las cuales tienen condiciones especiales de borde que las demas gorrutinas.
@@ -172,7 +177,7 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k int) ([][]b
 
 	defer wg.Done()
 
-	// newMapa = nuevoEstado(mapa, inicio, fin)
+	// newMapa = nuevoEstado(mapa, inicio, fin, k, n, filas, columnas)
 	// return newMapa, k
 
 	return mapa, k
@@ -182,23 +187,52 @@ func procesar(mapa [][]bool, wg *sync.WaitGroup, inicio, fin bool, k int) ([][]b
 // REALIZARA UNA EXTENSION FANTASMA DEL AREA QUE TIENE
 // LLAMARA A LA FUNCION QUE SE ENCARGUE DE ACTUALIZAR EL ESTADO ACTUAL DE LA CELDA PARA CADA CELDA QUE TENGA
 // RETORNARA EL NUEVO ESTADO DE SU AREA
-func nuevoEstado(mapa [][]bool, inicio, fin bool) [][]bool {
+func nuevoEstado(mapa [][]bool, inicio, fin bool, k, n, filas, columnas int, chans []chan bool) [][]bool {
 	if inicio {
+		// chans[0:2]
+		entrada := chans[0]
+		salida := chans[1]
+		borde := len(mapa[0])
+		bordeIzquierdo := mapa[0:filas][borde]
+		_ = entrada
+		_ = salida
+		_ = bordeIzquierdo
 		// La gorrutina tiene la columna inicial
-		// Buscar borde de su unico vecino
 		// Enviar su borde a su unico vecino
+		// Buscar borde de su unico vecino
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else if fin {
+		// chans[n-2:n]
+		entrada := chans[n-2]
+		salida := chans[n-1]
+		bordeDerecho := mapa[0:filas][0]
+		_ = entrada
+		_ = salida
+		_ = bordeDerecho
 		// La gorrutina tiene la columna final
-		// Buscar borde de su unico vecino
 		// Enviar su borde a su unico vecino
+		// Buscar borde de su unico vecino
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	} else {
+		// chans[(k*4-2):(k*4+1)]
+		entradaDerecha := chans[k*4-2]
+		salidaDerecha := chans[k*4-1]
+		entradaIzquierda := chans[k*4]
+		salidaIzquierda := chans[k*4+1]
+		borde := len(mapa[0])
+		bordeIzquierdo := mapa[0:filas][0]
+		bordeDerecho := mapa[0:filas][borde]
+		_ = entradaDerecha
+		_ = salidaDerecha
+		_ = entradaIzquierda
+		_ = salidaIzquierda
+		_ = bordeIzquierdo
+		_ = bordeDerecho
 		// La gorrutina tiene una columna intermedia
-		// Buscar borde a sus dos vecinos
 		// Enviar su borde respectivo al vecino respectivo
+		// Buscar borde a sus dos vecinos
 		// Realizar los pasos que aparecen en los comentarios al final
 		return mapa
 	}
