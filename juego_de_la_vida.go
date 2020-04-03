@@ -239,8 +239,7 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 	if n == 1 {
 		// CASO PARA CUANDO ES UNA GORRUTINA
 		resultado <- mundo
-	}
-	if inicio {
+	} else if inicio {
 		entrada := chans[0]
 		salida := chans[1]
 		_ = entrada
