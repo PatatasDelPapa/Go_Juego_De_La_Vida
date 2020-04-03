@@ -308,12 +308,6 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 
 		// USANDO NEW MAPA HACER LOS CALCULOS DEL NUEVO ESTADO
 
-		for i := range newMapa {
-			for j := range newMapa[i] {
-				newMapa[i][j] = mapaExtendido[i][j]
-			}
-		}
-
 		// renderizar(newMapa)
 
 		mundo.MAPA = newMapa
