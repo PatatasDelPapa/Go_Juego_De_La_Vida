@@ -186,24 +186,24 @@ func transiciones(celda bool, con int) bool {
 	if celda {
 		switch {
 		case con < 3:
-			fmt.Print(" Celda Viva Muere Por Pocos Vecinos\n")
+			// fmt.Print(" Celda Viva Muere Por Pocos Vecinos\n")
 			return false
 		case con == 3 || con == 4:
-			fmt.Print(" Celda Viva Sobrevive\n")
+			// fmt.Print(" Celda Viva Sobrevive\n")
 			return true
 		case con > 4:
-			fmt.Print(" Celda Viva Muere Por Sobrepoblamiento\n")
+			// fmt.Print(" Celda Viva Muere Por Sobrepoblamiento\n")
 			return false
 		default:
 			panic("Esta linea no deberia pasar nunca")
 		}
 	} else {
 		if con == 3 {
-			fmt.Print(" Celda Muerta Revive\n")
+			// fmt.Print(" Celda Muerta Revive\n")
 			return true
 		}
 	}
-	fmt.Print(" Celda Muerta Permanece Muerta\n")
+	// fmt.Print(" Celda Muerta Permanece Muerta\n")
 	return false
 }
 
@@ -293,18 +293,19 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 			}
 		}
 
-		println("-----------ANTES--------------")
-		renderizar(newMapa)
-		println()
+		// println("-----------ANTES--------------")
+		// renderizar(newMapa)
+		// println()
 
 		for i := 0; i < len(mapaExtendido); i++ {
 			for j := 0; j < len(mapaExtendido[i])-1; j++ {
 				newMapa[i][j] = vecinos(mapaExtendido, i, j)
 			}
 		}
-		println()
-		println("----------DESPUES------------")
-		renderizar(newMapa)
+
+		// println()
+		// println("----------DESPUES------------")
+		// renderizar(newMapa)
 
 		// USANDO NEW MAPA HACER LOS CALCULOS DEL NUEVO ESTADO
 
@@ -358,17 +359,23 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		salida <- sBordeIzquierdo
 		// fmt.Println("Gorrutina: ", k, " Envio sBordeIzquierdo")
 
+		// println("-----------ANTES--------------")
+		// renderizar(newMapa)
+		// println()
+
 		for i := range newMapa {
 			for j := range newMapa[i] {
 				eBordeIzquierdo[i] = append(eBordeIzquierdo[i], newMapa[i][j])
 			}
 		}
-		// for i := 1; i < len(eBordeIzquierdo); i++ {
-		// 	for j := 0; j < len(newMapa[i]); j++ {
-		// 		newMapa[i][j] = vecinos(eBordeIzquierdo, i, j+1)
-		// 	}
-		// }
+		for i := 0; i < len(eBordeIzquierdo); i++ {
+			for j := 0; j < len(eBordeIzquierdo[i])-1; j++ {
+				newMapa[i][j] = vecinos(eBordeIzquierdo, i, j+1)
+			}
+		}
 
+		// println()
+		// println("----------DESPUES------------")
 		// renderizar(newMapa)
 
 		mundo.MAPA = newMapa
@@ -436,16 +443,43 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 
 		_ = eBordeIzquierdo
 
+		// println("-----------BORDE IZQUIERDO-----------")
+		// renderizar(eBordeIzquierdo)
+		// println("-----------BORDE DERECHO-------------")
+		// renderizar(eBordeDerecho)
+
 		mapaExtendido := make([][]bool, len(newMapa))
 		for i := range newMapa {
 			mapaExtendido[i] = make([]bool, len(newMapa[i]))
 			copy(mapaExtendido[i], newMapa[i])
 		}
 
-		// mapaExtendido = append(eBordeDerecho, mapaExtendido...)
-		// mapaExtendido = append(mapaExtendido, eBordeIzquierdo...)
+		// println("-----------ANTES--------------")
+		// renderizar(newMapa)
 
-		// renderizar(mapaExtendido)
+		for i := 0; i < len(eBordeDerecho); i++ {
+			for j := 0; j < len(eBordeDerecho[i]); j++ {
+				mapaExtendido[i] = append(mapaExtendido[i], eBordeDerecho[i][j])
+			}
+		}
+
+		for i := range mapaExtendido {
+			for j := range mapaExtendido[i] {
+				eBordeIzquierdo[i] = append(eBordeIzquierdo[i], mapaExtendido[i][j])
+			}
+		}
+		// println()
+		// renderizar(eBordeIzquierdo)
+		// println()
+
+		for i := 0; i < len(eBordeIzquierdo); i++ {
+			for j := 0; j < len(eBordeIzquierdo[i])-2; j++ {
+				newMapa[i][j] = vecinos(eBordeIzquierdo, i, j+1)
+			}
+		}
+
+		// println("----------DESPUES------------")
+		// renderizar(newMapa)
 
 		mundo.MAPA = newMapa
 		// fmt.Println("Gorrutina: ", k, " Mandando mensaje por el channel resultado")
@@ -487,7 +521,7 @@ func vecinos(mapa [][]bool, i, j int) bool {
 	if j != columnas && i != 0 && mapa[i-1][j+1] { //	↘
 		con++
 	}
-	fmt.Print("[", i, "]", "[", j, "]", " CON = ", con, " |")
+	// fmt.Print("[", i, "]", "[", j, "]", " CON = ", con, " |")
 	return transiciones(mapa[i][j], con)
 }
 
