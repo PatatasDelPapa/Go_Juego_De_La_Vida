@@ -186,19 +186,24 @@ func transiciones(celda bool, con int) bool {
 	if celda {
 		switch {
 		case con < 3:
+			fmt.Print(" Celda Viva Muere Por Pocos Vecinos\n")
 			return false
 		case con == 3 || con == 4:
+			fmt.Print(" Celda Viva Sobrevive\n")
 			return true
 		case con > 4:
+			fmt.Print(" Celda Viva Muere Por Sobrepoblamiento\n")
 			return false
 		default:
 			panic("Esta linea no deberia pasar nunca")
 		}
 	} else {
 		if con == 3 {
+			fmt.Print(" Celda Muerta Revive\n")
 			return true
 		}
 	}
+	fmt.Print(" Celda Muerta Permanece Muerta\n")
 	return false
 }
 
@@ -281,7 +286,6 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		}
 		// println("------------------------")
 		// renderizar(mapaExtendido)
-		// println("------------------------")
 
 		for i := 0; i < len(eBordeDerecho); i++ {
 			for j := 0; j < len(eBordeDerecho[i]); j++ {
@@ -289,19 +293,18 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 			}
 		}
 
-		// println(" AFTER APPEND")
-		// println("-----------ANTES--------------")
-		// println("------------------------")
-		// renderizar(mapaExtendido)
-		// println("------------------------")
+		println("-----------ANTES--------------")
+		renderizar(newMapa)
+		println()
 
-		for i := 1; i < len(mapaExtendido); i++ {
-			for j := 0; j < len(mapaExtendido[i]); j++ {
-				mapaExtendido[i][j] = vecinos(mapaExtendido, i, j)
+		for i := 0; i < len(mapaExtendido); i++ {
+			for j := 0; j < len(mapaExtendido[i])-1; j++ {
+				newMapa[i][j] = vecinos(mapaExtendido, i, j)
 			}
 		}
-		// println("----------DESPUES------------")
-		// renderizar(mapaExtendido)
+		println()
+		println("----------DESPUES------------")
+		renderizar(newMapa)
 
 		// USANDO NEW MAPA HACER LOS CALCULOS DEL NUEVO ESTADO
 
@@ -328,23 +331,11 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		_, _ = salida, entrada
 		// println(" FIN TRUE ")
 
-		// -----------------------------------------//
-		// bordeDerecho := mundo.MAPA[0:filas][0]
-		// sBordeIzquierdo := make([][]bool, len(mundo.MAPA))
-		// for i := range mundo.MAPA {
-		// 	sBordeIzquierdo[i] = make([]bool, 1)
-		// 	copy(sBordeIzquierdo[i], mundo.MAPA[i])
-		// }
 		sBordeIzquierdo := make([][]bool, len(mundo.MAPA))
 		for i := range sBordeIzquierdo {
 			sBordeIzquierdo[i] = make([]bool, 1)
 			sBordeIzquierdo[i][0] = mundo.MAPA[i][0]
 		}
-		// println("MAPA")
-		// renderizar(mundo.MAPA)
-		// println("BORDE")
-		// renderizar(sBordeIzquierdo)
-		// -----------------------------------------//
 
 		viejoMapa := mundo.MAPA
 
@@ -367,35 +358,18 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		salida <- sBordeIzquierdo
 		// fmt.Println("Gorrutina: ", k, " Envio sBordeIzquierdo")
 
-		// fmt.Println("Gorrutina: ", k, " Esperando eBordeIzquierdo")
-		// eBordeIzquierdo := <-entrada
-		// fmt.Println("Gorrutina: ", k, " Recibio eBordeIzquierdo")
-
-		mapaExtendido := make([][]bool, len(newMapa))
 		for i := range newMapa {
-			mapaExtendido[i] = make([]bool, len(newMapa[i]))
-			copy(mapaExtendido[i], newMapa[i])
-		}
-
-		// for i := 0; i < len(eBordeDerecho); i++ {
-		// 	for j := 0; j < len(eBordeDerecho[i]); j++ {
-		// 		mapaExtendido[i] = append(mapaExtendido[i], eBordeDerecho[i][j])
-		// 	}
-		// }
-		println("-----------BORDE-------------")
-		renderizar(eBordeIzquierdo)
-
-		println("-----------ANTES-------------")
-		renderizar(mapaExtendido)
-
-		for i := range mapaExtendido {
-			for j := range mapaExtendido[i] {
-				mapaExtendido[i] = append(eBordeIzquierdo[i], mapaExtendido[i][j])
+			for j := range newMapa[i] {
+				eBordeIzquierdo[i] = append(eBordeIzquierdo[i], newMapa[i][j])
 			}
 		}
+		// for i := 1; i < len(eBordeIzquierdo); i++ {
+		// 	for j := 0; j < len(newMapa[i]); j++ {
+		// 		newMapa[i][j] = vecinos(eBordeIzquierdo, i, j+1)
+		// 	}
+		// }
 
-		println("----------DESPUES------------")
-		renderizar(mapaExtendido)
+		// renderizar(newMapa)
 
 		mundo.MAPA = newMapa
 		// fmt.Println("Gorrutina: ", k, " Mandando mensaje por el channel resultado")
@@ -513,6 +487,7 @@ func vecinos(mapa [][]bool, i, j int) bool {
 	if j != columnas && i != 0 && mapa[i-1][j+1] { //	↘
 		con++
 	}
+	fmt.Print("Filas: ", filas, " Columnas: ", columnas, " | [", i, "]", "[", j, "]", " CON = ", con, " |")
 	return transiciones(mapa[i][j], con)
 }
 
