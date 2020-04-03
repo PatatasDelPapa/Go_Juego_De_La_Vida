@@ -87,7 +87,7 @@ func main() {
 		println("Despues de wg.Wait")
 		// REORGANIZAR TODOS LOS MAPAS Y LUEGO RENDERIZAR
 		// reorganizar(mapas de cada gorrutina)
-		// println("--------------------------------------")
+		println("------------------------NUEVA GENERACION---------------------------------------")
 		// renderizar(mapa)
 	}
 
@@ -255,11 +255,15 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		// fmt.Println("Gorrutina: ", k, " Before jo.Wait()")
 		jo.Wait()
 
-		fmt.Println("Gorrutina: ", k, " Mandando sBordeDerecho Inicial")
+		fmt.Println("Gorrutina: ", k, " Mandando sBordeDerecho")
 		salida <- sBordeDerecho
+		fmt.Println("Gorrutina: ", k, " Envio sBordeDerecho")
+
 		fmt.Println("Gorrutina: ", k, " Esperando eBordeDerecho")
 		eBordeDerecho := <-entrada
 		fmt.Println("Gorrutina: ", k, " Recibio eBordeDerecho")
+
+		_ = eBordeDerecho
 
 		mapaExtendido := make([][]bool, len(newMapa))
 		for i := range newMapa {
@@ -270,11 +274,12 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		// renderizar(mapaExtendido)
 		// println("------------------------")
 
-		for i := 0; i < len(eBordeDerecho); i++ {
-			for j := 0; j < len(eBordeDerecho[i]); j++ {
-				mapaExtendido[i] = append(mapaExtendido[i], eBordeDerecho[i][j])
-			}
-		}
+		// for i := 0; i < len(eBordeDerecho); i++ {
+		// 	for j := 0; j < len(eBordeDerecho[i]); j++ {
+		// 		mapaExtendido[i] = append(mapaExtendido[i], eBordeDerecho[i][j])
+		// 	}
+		// }
+
 		// println(" AFTER APPEND")
 		// println("------------------------")
 		// renderizar(mapaExtendido)
@@ -299,15 +304,10 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 	} else if fin {
 		var entrada chan [][]bool
 		var salida chan [][]bool
-		fmt.Println("N = ", n)
-		if (n-1)%2 != 0 { // n = 3
-			salida = chans[n-2]
-			entrada = chans[n-1]
-		} else {
-			entrada = chans[n-2]
-			salida = chans[n-1]
-		}
+		salida = chans[k*2-2]
+		entrada = chans[k*2-1]
 
+		_, _ = salida, entrada
 		// println(" FIN TRUE ")
 
 		// -----------------------------------------//
@@ -333,10 +333,16 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 
 		fmt.Println("Gorrutina: ", k, " Esperando eBordeIzquierdo")
 		eBordeIzquierdo := <-entrada
+		_ = eBordeIzquierdo
 		fmt.Println("Gorrutina: ", k, " Recibio eBordeIzquierdo")
 
-		fmt.Println("Gorrutina: ", k, " Mandando sBordeIzquierdo Final")
+		fmt.Println("Gorrutina: ", k, " Mandando sBordeIzquierdo")
 		salida <- sBordeIzquierdo
+		fmt.Println("Gorrutina: ", k, " Envio sBordeIzquierdo")
+
+		// fmt.Println("Gorrutina: ", k, " Esperando eBordeIzquierdo")
+		// eBordeIzquierdo := <-entrada
+		// fmt.Println("Gorrutina: ", k, " Recibio eBordeIzquierdo")
 
 		mapaExtendido := make([][]bool, len(newMapa))
 		for i := range newMapa {
@@ -344,7 +350,7 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 			copy(mapaExtendido[i], newMapa[i])
 		}
 
-		mapaExtendido = append(mapaExtendido, eBordeIzquierdo...)
+		// mapaExtendido = append(mapaExtendido, eBordeIzquierdo...)
 
 		// renderizar(mapaExtendido)
 
@@ -358,23 +364,13 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		var salidaIzquierda chan [][]bool
 		var entradaDerecha chan [][]bool
 		var salidaDerecha chan [][]bool
-		// println(" NO INICIO NO FIN TRUE ")
-		// entradaIzquierda := chans[2*k-2]
-		// salidaIzquierda := chans[2*k-1]
-		// entradaDerecha := chans[2*k]
-		// salidaDerecha := chans[2*k+1]
 
-		if k%2 != 0 {
-			salidaIzquierda = chans[k*2-2]
-			entradaIzquierda = chans[k*2-1]
-			salidaDerecha = chans[k*2]
-			entradaDerecha = chans[k*2+1]
-		} else {
-			entradaIzquierda = chans[k*2-2]
-			salidaIzquierda = chans[k*2-1]
-			entradaDerecha = chans[k*2]
-			salidaDerecha = chans[k*2+1]
-		}
+		salidaIzquierda = chans[k*2-2]
+		entradaIzquierda = chans[k*2-1]
+		entradaDerecha = chans[k*2]
+		salidaDerecha = chans[k*2+1]
+
+		_, _, _, _ = entradaIzquierda, salidaIzquierda, entradaDerecha, salidaDerecha
 
 		viejoMapa := mundo.MAPA
 
@@ -405,12 +401,6 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		// fmt.Println("Gorrutina: ", k, " Before jo.Wait()")
 		jo.Wait()
 
-		fmt.Println("Gorrutina: ", k, " Esperando eBordeIzquierdo")
-		eBordeIzquierdo := <-entradaIzquierda
-		fmt.Println("Gorrutina: ", k, " Recibio eBordeIzquierdo")
-
-		fmt.Println("Gorrutina: ", k, " Mandando sBordeIzquierdo Intermedio")
-		salidaIzquierda <- sBordeIzquierdo
 		fmt.Println("Gorrutina: ", k, " Mandando sBordeDerecho Intermedio")
 		salidaDerecha <- sBordeDerecho
 
@@ -418,14 +408,25 @@ func nuevoEstado(mundo world, inicio, fin bool, k, n, filas int, chans [124]chan
 		eBordeDerecho := <-entradaDerecha
 		fmt.Println("Gorrutina: ", k, " Recibio eBordeDerecho")
 
+		_ = eBordeDerecho
+
+		fmt.Println("Gorrutina: ", k, " Mandando sBordeIzquierdo Intermedio")
+		salidaIzquierda <- sBordeIzquierdo
+
+		fmt.Println("Gorrutina: ", k, " Esperando eBordeIzquierdo")
+		eBordeIzquierdo := <-entradaIzquierda
+		fmt.Println("Gorrutina: ", k, " Recibio eBordeIzquierdo")
+
+		_ = eBordeIzquierdo
+
 		mapaExtendido := make([][]bool, len(newMapa))
 		for i := range newMapa {
 			mapaExtendido[i] = make([]bool, len(newMapa[i]))
 			copy(mapaExtendido[i], newMapa[i])
 		}
 
-		mapaExtendido = append(eBordeDerecho, mapaExtendido...)
-		mapaExtendido = append(mapaExtendido, eBordeIzquierdo...)
+		// mapaExtendido = append(eBordeDerecho, mapaExtendido...)
+		// mapaExtendido = append(mapaExtendido, eBordeIzquierdo...)
 
 		// renderizar(mapaExtendido)
 
