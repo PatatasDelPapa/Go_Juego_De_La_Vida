@@ -487,7 +487,7 @@ func vecinos(mapa [][]bool, i, j int) bool {
 	if j != columnas && i != 0 && mapa[i-1][j+1] { //	↘
 		con++
 	}
-	fmt.Print("Filas: ", filas, " Columnas: ", columnas, " | [", i, "]", "[", j, "]", " CON = ", con, " |")
+	fmt.Print("[", i, "]", "[", j, "]", " CON = ", con, " |")
 	return transiciones(mapa[i][j], con)
 }
 
