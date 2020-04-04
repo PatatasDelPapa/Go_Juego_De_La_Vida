@@ -56,19 +56,20 @@ func main() {
 	for i := 0; i < len(mapa); i++ {
 		mapa[i] = make([]bool, columnas)
 	}
-	print("---------------\n")
+	println("------------------Mapa Original--------------------")
 	mapa = rellenar(mapa, semilla)
 	newWorld := world{MAPA: mapa, NRO: 0}
 	_ = newWorld
 	renderizar(newWorld.MAPA)
-	print("---------------\n")
-
+	println("------------------Iniciando Gorrutinas-------------")
+	areas := make([]world, nroGorrutinas)
 	// al final de cada generacion se realiza un wg.Wait() y luego se reorganiza y renderiza el estado actual del mapa
 	for i := 0; i < generaciones; i++ {
 		jo.Add(nroGorrutinas)
 		wg.Add(nroGorrutinas)
 		for j := 0; j < nroGorrutinas; j++ {
 			mundoGorrutina := calcularMapa(mapa, nroGorrutinas, filas, columnas, j)
+			// mundoGorrutina.MAPA = rellenar(mundoGorrutina.MAPA, semilla)
 			// renderizar(mundoGorrutina.MAPA)
 			// print("---------------\n")
 			if j == 0 {
@@ -81,15 +82,19 @@ func main() {
 		}
 		for j := 0; j < nroGorrutinas; j++ {
 			// fmt.Println("J = ", j, "Antes de <- resultado")
-			<-resultado
+			areas[j] = <-resultado
 			// fmt.Println("Despues de <- Resultado")
 		}
+		mapa = reorganizar(areas, nroGorrutinas, filas, columnas)
+		renderizar(mapa)
 		// println("Antes de wg.Wait")
 		wg.Wait()
 		// println("Despues de wg.Wait")
 		// REORGANIZAR TODOS LOS MAPAS Y LUEGO RENDERIZAR
 		// reorganizar(mapas de cada gorrutina)
-		println("------------------------NUEVA GENERACION---------------------------------------")
+		if i != generaciones-1 {
+			println("------------------Nueva Generacion-----------------")
+		}
 		// renderizar(mapa)
 	}
 
@@ -525,3 +530,48 @@ func vecinos(mapa [][]bool, i, j int) bool {
 // Actualizar la informacion en un nuevo mapa temporal para no arruinar el calculo de las demas celdas
 // Retornar el mapa temporal con la informacion de las celdas actualizadas
 // }
+
+func reorganizar(mundos []world, n, filas, columnas int) [][]bool {
+
+	var auxiliar world
+	_ = auxiliar
+
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			// fmt.Println("[", i, "] = ", mundos[i].NRO, " | [", j, "] = ", mundos[j].NRO)
+			if i != j && i == mundos[j].NRO {
+				auxiliar = mundos[i]
+				mundos[i] = mundos[j]
+				mundos[j] = auxiliar
+			}
+		}
+	}
+
+	mapa := make([][]bool, filas)
+
+	for i := range mundos {
+		for j := range mundos[i].MAPA {
+			for k := range mundos[i].MAPA[j] {
+				mapa[j] = append(mapa[j], mundos[i].MAPA[j][k])
+			}
+		}
+	}
+
+	// FUNCION QUE BUSCA RETORNAR UN NUEVO MAPA DE DIMENSIONES [filas][((k+1)*bloque)]
+	// QUE COPIE EL MAPA ORIGINAL DESDE [0][(k*bloque)] hasta [filas-1][((k+1)*bloque-1)]
+
+	return mapa
+}
+
+func renderizarNoNewLine(mapa [][]bool) {
+	for i := range mapa {
+		for _, v := range mapa[i] {
+			if v {
+				print("■ ")
+			} else {
+				print("□ ")
+			}
+		}
+	}
+	print("\n")
+}
